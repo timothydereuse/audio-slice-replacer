@@ -17,6 +17,9 @@ def nn_ind_mapping(X, Y, pca_reduce=3, normalize=True, finish_early_factor=0.03,
         X_std = np.std(X, 0)
         Y_std = np.std(X, 0)
 
+        X_std[X_std == 0] = 1
+        Y_std[Y_std == 0] = 1
+
         X = (X - X_avg) / X_std
         Y = (Y - Y_avg) / Y_std
 
