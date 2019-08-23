@@ -11,15 +11,10 @@ reload(ausl)
 reload(fe)
 reload(nim)
 
-# path to folder of sound sources. ALL sound files in here will be added to the possible sources.
-sources_path = r"C:\Users\Tim\Documents\MUSIC DATA\real drums kits\Ultimate Drum Kits Pt1"
-
 ftypes = ['wav', 'aiff', 'aif']     # only bother with files of these types
 
-slice_threshold_secs = 8    # if a source is longer than this number of seconds, then slice it up before
-                            # adding it to the pool of source audio clips
-length_limit_secs = 30      # if a source is longer than this number of seconds, then discard anything
-                            # past this point so you don't accidentally slice up a 20 min file
+# path to folder of sound sources. ALL sound files in here will be added to the possible sources.
+sources_path = r"C:\Users\Tim\Documents\MUSIC DATA\real drums kits\Ultimate Drum Kits Pt1"
 
 # path to target file - this will be sliced, and sound slices from the sources will be matched to it
 target_file = r"C:\Users\Tim\Documents\MUSIC DATA\Loops\Drumdays-Vol-02-Part1-a\bluesmagoos_cantgetenough2.wav"
@@ -27,6 +22,11 @@ target_file = r"C:\Users\Tim\Documents\MUSIC DATA\Loops\Drumdays-Vol-02-Part1-a\
 match_volume = True         # attempt to match the energy between each source slice and the slice its replacing
 pca_reduce_amt = 3          # strength of dimensionality reduction on extracted features. higher = messier
                             # categorization by the knn
+slice_threshold_secs = 8    # if a source is longer than this number of seconds, then slice it up before
+                            # adding it to the pool of source audio clips
+length_limit_secs = 30      # if a source is longer than this number of seconds, then discard anything
+                            # past this point so you don't accidentally slice up a 20 min file
+declick_amt = 15            # use a linear envelope of this many samples to declick slices.
 
 timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M')
 out_fname = f'output_{timestamp}.wav'   #output filename with timestamp
@@ -91,14 +91,14 @@ for i, fname in enumerate(sources_fnames):
         continue
 
     print(f'slicing source {fname}...')
-    slices, _ = slice_long_sample(s, sr, fname=fname, length_limit=length_limit_secs)
+    slices, _ = slice_long_sample(s, sr, fname=fname, declick_samples=declick_amt, length_limit=length_limit_secs)
     sources += slices
 
 # perform onset detection and get features for each detected slice
 y, sr = soundfile.read(target_file)
 if len(y.shape) > 1:
     y = np.mean(y, 1)
-targets, onset_times = slice_long_sample(y, sr, fname=target_file)
+targets, onset_times = slice_long_sample(y, sr, fname=target_file, declick_samples=declick_amt)
 
 print('performing assignment with knn...')
 # gather features and perform index mapping between source and target
