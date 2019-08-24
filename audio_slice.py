@@ -12,3 +12,7 @@ class AudioSlice(object):
         if normalize:
             self.audio = audio / max(np.abs(audio))
         self.sr = sr
+
+    def get_rev_slice(self):
+        new_slice = AudioSlice(self.audio[::-1], self.sr, self.fname)
+        return new_slice

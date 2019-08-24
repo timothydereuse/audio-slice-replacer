@@ -3,6 +3,7 @@ import numpy as np
 import soundfile
 import os
 import datetime
+from pathlib import Path
 import feature_extraction as fe
 import audio_slice as ausl
 import nn_ind_mapping as nim
@@ -14,14 +15,15 @@ reload(nim)
 ftypes = ['wav', 'aiff', 'aif']     # only bother with files of these types
 
 # path to folder of sound sources. ALL sound files in here will be added to the possible sources.
-sources_path = r"C:\Users\Tim\Documents\MUSIC DATA\real drums kits\Ultimate Drum Kits Pt1"
+sources_path = r"C:\Users\Tim\Documents\MUSIC DATA\short misc samples,fx\BoulangerTamTamReplacements22"
 
 # path to target file - this will be sliced, and sound slices from the sources will be matched to it
-target_file = r"C:\Users\Tim\Documents\MUSIC DATA\Loops\Drumdays-Vol-02-Part1-a\bluesmagoos_cantgetenough2.wav"
+target_file = r"C:\Users\Tim\Documents\MUSIC DATA\Loops\Drumdays-Vol-02-Part1-b\primus_tommythecat_live3solo.wav"
 
 match_volume = True         # attempt to match the energy between each source slice and the slice its replacing
+include_reverses = False    # include the reverse of each slice. gonna be honest w/u. its not that fun
 pca_reduce_amt = 3          # strength of dimensionality reduction on extracted features. higher = messier
-                            # categorization by the knn
+                            # categorization by the knn but more information included
 slice_threshold_secs = 8    # if a source is longer than this number of seconds, then slice it up before
                             # adding it to the pool of source audio clips
 length_limit_secs = 30      # if a source is longer than this number of seconds, then discard anything
@@ -29,7 +31,7 @@ length_limit_secs = 30      # if a source is longer than this number of seconds,
 declick_amt = 15            # use a linear envelope of this many samples to declick slices.
 
 timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M')
-out_fname = f'output_{timestamp}.wav'   #output filename with timestamp
+out_fname = f'output_{timestamp}.wav'   # output filename with timestamp
 
 poll_every = 50             # controls how often console output is produced when calculating features
 
@@ -62,11 +64,11 @@ def slice_long_sample(y, sr, declick_samples=15, length_limit=None, fname=''):
 
 def get_fnames_from_directory(path):
     fnames = []
-    for dir, folder, files in os.walk(sources_path):
+    for directory, folder, files in os.walk(sources_path):
         for file in files:
             if not file.split('.')[-1] in ftypes:
                 continue
-            fnames.append(rf'{dir}\{file}')
+            fnames.append(Path(directory) / file)
 
     if not fnames:
         raise FileNotFoundError(f'directory {path} not found!')
@@ -93,6 +95,10 @@ for i, fname in enumerate(sources_fnames):
     print(f'slicing source {fname}...')
     slices, _ = slice_long_sample(s, sr, fname=fname, declick_samples=declick_amt, length_limit=length_limit_secs)
     sources += slices
+
+if include_reverses:
+    print('calculating features for reverse slices...')
+    sources += [x.get_rev_slice() for x in sources]
 
 # perform onset detection and get features for each detected slice
 y, sr = soundfile.read(target_file)
